@@ -1,0 +1,5 @@
+{
+  "name": "Pirañas Padel Group",
+  "description": "Una aplicación para gestionar partidos de pádel para el grupo Pirañas. Los usuarios pueden crear partidos y otros pueden apuntarse para jugar. Incluye un panel para los próximos partidos y un sistema de lista de espera.",
+  "requestFramePermissions": []
+}
