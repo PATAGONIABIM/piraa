@@ -6,6 +6,8 @@ interface DashboardProps {
   matches: Match[];
   currentUser: User | null;
   view: 'all' | 'my';
+  isAdmin: boolean;
+  onEditUser: (user: User) => void;
   onJoinMatch: (matchId: string) => void;
   onLeaveMatch: (matchId: string) => void;
   onJoinWaitingList: (matchId: string) => void;
@@ -15,8 +17,20 @@ interface DashboardProps {
   onEditMatch: (match: Match) => void;
 }
 
-
-const Dashboard: React.FC<DashboardProps> = ({ matches, currentUser, view, onJoinMatch, onLeaveMatch, onJoinWaitingList, onLeaveWaitingList, onOpenScoreModal, onShareMatch, onEditMatch }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  matches, 
+  currentUser, 
+  view, 
+  isAdmin, 
+  onEditUser,
+  onJoinMatch, 
+  onLeaveMatch, 
+  onJoinWaitingList, 
+  onLeaveWaitingList, 
+  onOpenScoreModal, 
+  onShareMatch, 
+  onEditMatch 
+}) => {
   
   const filteredAndSortedMatches = useMemo(() => {
     const now = new Date();
@@ -51,6 +65,8 @@ const Dashboard: React.FC<DashboardProps> = ({ matches, currentUser, view, onJoi
               key={match.id}
               match={match}
               currentUser={currentUser}
+              isAdmin={isAdmin}
+              onEditUser={onEditUser}
               onJoinMatch={onJoinMatch}
               onLeaveMatch={onLeaveMatch}
               onJoinWaitingList={onJoinWaitingList}

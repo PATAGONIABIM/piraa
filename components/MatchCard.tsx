@@ -5,6 +5,8 @@ import { LocationIcon, ClockIcon, ShareIcon, XIcon, PencilIcon } from './icons';
 interface MatchCardProps {
   match: Match;
   currentUser: User | null;
+  isAdmin: boolean;
+  onEditUser: (user: User) => void;
   onJoinMatch: (matchId: string) => void;
   onLeaveMatch: (matchId: string) => void;
   onJoinWaitingList: (matchId: string) => void;
@@ -46,7 +48,19 @@ const PlayerChip: React.FC<PlayerChipProps> = ({ user, onClick }) => {
 }
 
 
-const MatchCard: React.FC<MatchCardProps> = ({ match, currentUser, onJoinMatch, onLeaveMatch, onJoinWaitingList, onLeaveWaitingList, onOpenScoreModal, onShareMatch, onEditMatch }) => {
+const MatchCard: React.FC<MatchCardProps> = ({ 
+    match, 
+    currentUser, 
+    isAdmin, 
+    onEditUser,
+    onJoinMatch, 
+    onLeaveMatch, 
+    onJoinWaitingList, 
+    onLeaveWaitingList, 
+    onOpenScoreModal, 
+    onShareMatch, 
+    onEditMatch 
+}) => {
   const [quickViewUser, setQuickViewUser] = useState<User | null>(null);
   
   const isPlayer = currentUser ? match.players.some(p => p.id === currentUser.id) : false;
@@ -54,6 +68,9 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, currentUser, onJoinMatch, 
   const isOnWaitingList = currentUser ? match.waitingList.some(p => p.id === currentUser.id) : false;
   const isFull = match.players.length >= 4;
   
+  // Permiso para editar partido (Organizador O Admin)
+  const canEditMatch = isOrganizer || isAdmin;
+
   const ActionButton = () => {
     if (!currentUser) return null;
 
@@ -222,7 +239,8 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, currentUser, onJoinMatch, 
             <ShareIcon className="w-5 h-5" />
         </button>
         
-        {isOrganizer && (
+        {/* Mostramos el botón de editar si es organizador o admin */}
+        {canEditMatch && (
            <button 
              onClick={(e) => {
                  e.stopPropagation();
@@ -263,6 +281,19 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, currentUser, onJoinMatch, 
                 </h3>
                 {quickViewUser.email && (
                     <p className="text-xs text-slate-500 font-medium truncate max-w-[200px]">{quickViewUser.email}</p>
+                )}
+
+                {/* BOTÓN SOLO PARA ADMINS */}
+                {isAdmin && (
+                    <button
+                        onClick={() => {
+                            onEditUser(quickViewUser);
+                            setQuickViewUser(null);
+                        }}
+                        className="mt-3 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+                    >
+                        Editar Usuario / Cambiar Foto
+                    </button>
                 )}
                 
                 <button 
