@@ -237,16 +237,14 @@ const App: React.FC = () => {
 
   // 5. NUEVA FUNCIÓN: ELIMINAR PARTIDO
   const handleDeleteMatch = async (matchId: string) => {
-      // Confirmación simple
-      if (window.confirm("¿Estás seguro de eliminar este partido?")) {
-          try {
-            await deleteDoc(doc(db, "matches", matchId));
-            setEditMatchModalOpen(false);
-            setMatchToEdit(null);
-          } catch (error) {
-              console.error("Error eliminando partido:", error);
-              alert("No tienes permisos para eliminar este partido.");
-          }
+      // Se eliminó el window.confirm, borra directamente
+      try {
+        await deleteDoc(doc(db, "matches", matchId));
+        setEditMatchModalOpen(false);
+        setMatchToEdit(null);
+      } catch (error) {
+          console.error("Error eliminando partido:", error);
+          alert("No tienes permisos para eliminar este partido.");
       }
   };
 
