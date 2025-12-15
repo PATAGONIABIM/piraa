@@ -137,10 +137,16 @@ const App: React.FC = () => {
         // Crear fecha límite: El día del partido a las 23:59:59
         const endOfMatchDay = new Date(year, month - 1, day, 23, 59, 59);
 
-        // Si la hora actual es mayor al final del día del partido, se borra
+        // Si la hora actual es mayor al final del día del partido
         if (now > endOfMatchDay) {
-             console.log(`Eliminando partido vencido: ${match.id} (Fecha: ${match.date})`);
-             deleteDoc(doc(db, "matches", match.id)).catch(err => console.error("Error limpieza:", err));
+             // Solo intentar borrar si tengo permiso (Creador o Admin)
+             const isCreator = match.createdBy?.id === currentUser.id;
+             const isUserAdmin = ADMIN_IDS.includes(currentUser.id);
+
+             if (isCreator || isUserAdmin) {
+                 console.log(`Eliminando partido vencido: ${match.id} (Fecha: ${match.date})`);
+                 deleteDoc(doc(db, "matches", match.id)).catch(err => console.error("Error limpieza:", err));
+             }
         }
       });
     });
