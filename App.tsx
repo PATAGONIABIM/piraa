@@ -31,6 +31,9 @@ import {
   deleteField
 } from "firebase/firestore";
 
+// 1. DEFINIR LOS ADMINS (IDs fijos según tu regla de seguridad)
+const ADMIN_IDS = ['96Cv3IgIGeRKXYw7ESq4Kpip4ZS2', 'ah5nAb0KBxbhDlZZCAdelZ5f8AP2'];
+
 const App: React.FC = () => {
   // Estados de datos
   const [users, setUsers] = useState<User[]>([]);
@@ -52,6 +55,12 @@ const App: React.FC = () => {
   const [matchToEdit, setMatchToEdit] = useState<Match | null>(null);
   const [shareModalType, setShareModalType] = useState<'created' | 'status'>('status');
   const [view, setView] = useState<'all' | 'my'>('all');
+
+  // 2. NUEVO ESTADO: Para saber qué usuario se está editando (puede ser uno mismo o uno ajeno si eres admin)
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+
+  // Helper para saber si el usuario actual es admin
+  const isAdmin = currentUser && ADMIN_IDS.includes(currentUser.id);
 
   // --- 1. AUTHENTICATION LISTENER ---
   useEffect(() => {
@@ -119,16 +128,19 @@ const App: React.FC = () => {
 
       setMatches(matchesData);
 
-      // Lógica de limpieza automática
+      // --- LÓGICA DE LIMPIEZA ACTUALIZADA (11:59 PM del mismo día) ---
       const now = new Date();
       matchesData.forEach(match => {
-        if (match.matchTimestamp && match.matchTimestamp instanceof Date) {
-          // Eliminar 5 minutos después de la hora
-          const deletionTime = new Date(match.matchTimestamp.getTime() + 5 * 60 * 1000);
-          
-          if (now > deletionTime && match.createdBy.id === currentUser.id) {
+        // Parsear la fecha del partido (YYYY-MM-DD)
+        const [year, month, day] = match.date.split('-').map(Number);
+        
+        // Crear fecha límite: El día del partido a las 23:59:59
+        const endOfMatchDay = new Date(year, month - 1, day, 23, 59, 59);
+
+        // Si la hora actual es mayor al final del día del partido, se borra
+        if (now > endOfMatchDay) {
+             console.log(`Eliminando partido vencido: ${match.id} (Fecha: ${match.date})`);
              deleteDoc(doc(db, "matches", match.id)).catch(err => console.error("Error limpieza:", err));
-          }
         }
       });
     });
@@ -138,19 +150,29 @@ const App: React.FC = () => {
 
   // --- LOGIC HANDLERS (Connected to Firebase) ---
 
+  // 4. NUEVA LÓGICA DE EDICIÓN DE USUARIO (Maneja propios y ajenos)
+  const handleOpenProfile = (userTarget: User) => {
+      setUserToEdit(userTarget); // Establecemos a quién vamos a editar
+      setEditProfileModalOpen(true);
+  };
+
   const handleUpdateUser = async (updatedUser: User) => {
-    if (!currentUser) return;
-    
-    // Actualizar en Firestore
+    // Usamos el ID del usuario que se está editando (updatedUser.id), no necesariamente el currentUser
     const userRef = doc(db, "users", updatedUser.id);
+    
     await updateDoc(userRef, {
         name: updatedUser.name,
         phone: updatedUser.phone || '',
-        dob: updatedUser.dob || '',
+        avatar: updatedUser.avatar // Aquí se guarda la imagen cambiada
     });
 
-    setCurrentUser(updatedUser);
+    // Si me edité a mí mismo, actualizo mi estado local visual inmediatamente
+    if (currentUser && currentUser.id === updatedUser.id) {
+        setCurrentUser(updatedUser);
+    }
+    
     setEditProfileModalOpen(false);
+    setUserToEdit(null);
   };
 
   const handleCreateMatch = async (date: string, time: string, court: string) => {
@@ -205,6 +227,21 @@ const App: React.FC = () => {
 
      setEditMatchModalOpen(false);
      setMatchToEdit(null);
+  };
+
+  // 5. NUEVA FUNCIÓN: ELIMINAR PARTIDO
+  const handleDeleteMatch = async (matchId: string) => {
+      // Confirmación simple
+      if (window.confirm("¿Estás seguro de eliminar este partido?")) {
+          try {
+            await deleteDoc(doc(db, "matches", matchId));
+            setEditMatchModalOpen(false);
+            setMatchToEdit(null);
+          } catch (error) {
+              console.error("Error eliminando partido:", error);
+              alert("No tienes permisos para eliminar este partido.");
+          }
+      }
   };
 
   const handleSetScore = async (matchId: string, score: { team1: number[], team2: number[] }) => {
@@ -331,11 +368,7 @@ const App: React.FC = () => {
       <div className="relative z-10">
         <Header
             onOpenStatsModal={() => setStatsModalOpen(true)}
-            onOpenProfileModal={() => {
-                if (currentUser) {
-                    setEditProfileModalOpen(true);
-                }
-            }}
+            onOpenProfileModal={() => currentUser && handleOpenProfile(currentUser)}
             onLogout={handleLogout}
             userAvatar={currentUser?.avatar}
         />
@@ -344,6 +377,8 @@ const App: React.FC = () => {
                 matches={matches} 
                 currentUser={currentUser}
                 view={view}
+                isAdmin={isAdmin || false} 
+                onEditUser={handleOpenProfile}
                 onJoinMatch={handleJoinMatch}
                 onLeaveMatch={handleLeaveMatch}
                 onJoinWaitingList={handleJoinWaitingList}
@@ -371,11 +406,14 @@ const App: React.FC = () => {
             />
         </Modal>
 
-        {currentUser && (
+        {(userToEdit || currentUser) && (
             <EditProfileModal
             isOpen={isEditProfileModalOpen}
-            onClose={() => setEditProfileModalOpen(false)}
-            user={currentUser}
+            onClose={() => {
+                setEditProfileModalOpen(false);
+                setUserToEdit(null);
+            }}
+            user={userToEdit || currentUser!}
             onSave={handleUpdateUser}
             />
         )}
@@ -414,6 +452,7 @@ const App: React.FC = () => {
             }}
             match={matchToEdit}
             onSave={handleUpdateMatchDetails}
+            onDelete={handleDeleteMatch}
         />
       </div>
     </div>
